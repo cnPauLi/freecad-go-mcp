@@ -1,0 +1,15 @@
+# Cross-compiled release binaries (`make dist`)
+/dist/
+
+# Host build output (`make build`)
+/freecad-go-mcp
+/freecad-go-mcp.exe
+/freecad-go-mcp_*
+
+# macOS / Windows metadata
+.DS_Store
+Thumbs.db
+
+# Python bytecode from the bundled FreeCAD addon
+__pycache__/
+*.py[cod]

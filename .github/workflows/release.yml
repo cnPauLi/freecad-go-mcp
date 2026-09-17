@@ -1,0 +1,65 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Format, vet and test
+        run: make check
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so `git describe` can resolve the tag for the version.
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Cross-compile static binaries
+        run: make checksums
+
+      - name: Verify the Linux binaries are statically linked
+        run: |
+          set -e
+          for binary in dist/freecad-go-mcp_*_linux_amd64 dist/freecad-go-mcp_*_linux_arm64; do
+            if ! file "$binary" | grep -q "statically linked"; then
+              echo "$binary is not statically linked:"
+              file "$binary"
+              exit 1
+            fi
+          done
+          echo "linux binaries are statically linked"
+
+      - name: List the build output
+        run: ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: freecad-go-mcp-dist
+          path: dist/*
+
+      - name: Publish the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
